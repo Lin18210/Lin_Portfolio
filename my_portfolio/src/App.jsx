@@ -41,11 +41,27 @@ export default function Portfolio() {
 
   const projects = [
     {
+      title: "Assistant ChatBot",
+      description: "A responsive Ai chatbot that provide information of the Guy Heart Photography website and help clients to book consultion sessions.",
+      technologies: ["React", "Node.js", "Tailwind", "Stripe"],
+      githubUrl: "https://github.com/Lin18210/Guy_Chatbot",
+      liveUrl: "https://guy-chatbot.onrender.com",
+      gradient: "from-blue-400 to-cyan-500"
+    },
+    {
       title: "Social Media Republic",
       description: "A responsive photography booking website with Stripe payment integration. Displays studio works and services with date booking functionality for shooting sessions.",
       technologies: ["React", "Node.js", "Tailwind", "Stripe"],
       githubUrl: "https://github.com/Lin18210/SRM_Front",
       liveUrl: "https://srm-front.vercel.app/",
+      gradient: "from-blue-400 to-cyan-500"
+    },
+    {
+      title: "Guy Heart Photography",
+      description: "A responsive wedding photography website. Displays studio works and services with date booking functionality for shooting sessions.",
+      technologies: ["React", "Node.js", "Tailwind", "Stripe"],
+      githubUrl: "https://github.com/Lin18210/Guy_Heart_Photography",
+      liveUrl: "https://guy-heart-photography.vercel.app/",
       gradient: "from-blue-400 to-cyan-500"
     },
     {
