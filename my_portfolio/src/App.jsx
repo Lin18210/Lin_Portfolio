@@ -71,6 +71,14 @@ export default function Portfolio() {
 
   const projects = [
     {
+      title: "InsurTech",
+      description: "A Full-Stack responsive insurance quotation web application. Users can get insurance quotes based on their inputs and make payments through Stripe integration.",
+      technologies: ["React", "Node.js", "Tailwind", "Stripe"],
+      githubUrl: "https://github.com/Lin18210/InsurTech",
+      liveUrl: "https://insur-tech.vercel.app/",
+      gradient: "from-blue-600 to-violet-600"
+    },
+    {
       title: "Assistant ChatBot",
       description: "A responsive Ai chatbot that provide information of the Guy Heart Photography website and help clients to book consultion sessions.",
       technologies: ["React", "Node.js", "Tailwind", "Stripe"],
@@ -614,6 +622,7 @@ export default function Portfolio() {
           100% { transform: translateX(100%); }
         }
       `}</style>
+
     </div>
   );
 }
