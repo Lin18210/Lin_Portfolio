@@ -76,7 +76,15 @@ export default function Portfolio() {
       technologies: ["React", "Node.js", "Tailwind", "Stripe"],
       githubUrl: "https://github.com/Lin18210/InsurTech",
       liveUrl: "https://insur-tech.vercel.app/",
-      gradient: "from-blue-600 to-violet-600"
+      gradient: "from-yellow-600 to-blue-600"
+    },
+    {
+      title: "Skincare App",
+      description: "A Full-Stack responsive skincare web application. Users can get skincare quotes based on their skin type and skin concerns.",
+      technologies: ["React", "Node.js", "Tailwind", "Stripe"],
+      githubUrl: "https://github.com/Lin18210/Skincare",
+      liveUrl: "https://skincare-ruddy-rho.vercel.app/",
+      gradient: "from-red-600 to-pink-600"
     },
     {
       title: "Assistant ChatBot",
