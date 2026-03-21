@@ -95,6 +95,14 @@ export default function Portfolio() {
       gradient: "from-blue-600 to-violet-600"
     },
     {
+      title: "Sans Interior",
+      description: "A responsive interior design website. Displays studio works.",
+      technologies: ["React", "Tailwind"],
+      githubUrl: "https://github.com/Lin18210/Sans_Interior",
+      liveUrl: "https://sans-interior.vercel.app/",
+      gradient: "from-blue-600 to-gray-600"
+    },
+    {
       title: "Mochi Desk Sim",
       description: "A small desktop companion web that walk around and do random thing on the screen.",
       technologies: ["HTML", "CSS", "JavaScript"],
