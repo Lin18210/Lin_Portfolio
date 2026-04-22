@@ -1,79 +1,85 @@
 @import "tailwindcss";
 
 /* ───── Base & Typography ───── */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-html {
-  scroll-behavior: smooth;
-  cursor: none; /* hide default cursor – we draw a custom one */
-}
+  html {
+    scroll-behavior: smooth;
+    cursor: none;
+  }
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-::selection {
-  background: rgba(34, 211, 238, 0.3);
-  color: #fff;
+  ::selection {
+    background: rgba(34, 211, 238, 0.3);
+    color: #fff;
+  }
+
+  /* ───── Custom Scrollbar ───── */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, 0.3);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.55);
+  }
 }
 
 /* ── Custom Cursor (desktop only) ── */
-@media (pointer: fine) {
-  .custom-cursor {
-    position: fixed;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(34, 211, 238, 0.9);
-    pointer-events: none;
-    z-index: 99999;
-    mix-blend-mode: difference;
-    transition: transform 0.15s ease, width 0.2s ease, height 0.2s ease, background 0.2s ease;
+@layer components {
+  @media (pointer: fine) {
+    .custom-cursor {
+      position: fixed;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(34, 211, 238, 0.9);
+      pointer-events: none;
+      z-index: 99999;
+      mix-blend-mode: difference;
+      will-change: transform;
+      /* No transition on transform — use RAF for instant movement */
+      transition: width 0.2s ease, height 0.2s ease, background 0.2s ease;
+    }
+    .custom-cursor.hovering {
+      width: 48px;
+      height: 48px;
+      background: rgba(34, 211, 238, 0.15);
+      border: 2px solid rgba(34, 211, 238, 0.6);
+      mix-blend-mode: normal;
+    }
+    .cursor-trail {
+      position: fixed;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(34, 211, 238, 0.25);
+      pointer-events: none;
+      z-index: 99998;
+      will-change: transform;
+      transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+    }
+    .cursor-trail.hovering {
+      width: 64px;
+      height: 64px;
+      border-color: rgba(34, 211, 238, 0.12);
+    }
   }
-  .custom-cursor.hovering {
-    width: 48px;
-    height: 48px;
-    background: rgba(34, 211, 238, 0.15);
-    border: 2px solid rgba(34, 211, 238, 0.6);
-    mix-blend-mode: normal;
-  }
-  .cursor-trail {
-    position: fixed;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(34, 211, 238, 0.25);
-    pointer-events: none;
-    z-index: 99998;
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-                width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
-  }
-  .cursor-trail.hovering {
-    width: 64px;
-    height: 64px;
-    border-color: rgba(34, 211, 238, 0.12);
-  }
-}
-
-/* ───── Custom Scrollbar ───── */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0a0a0a;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.3);
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
 }
 
 /* ───── Keyframes ───── */
@@ -114,68 +120,185 @@ body {
   50%      { opacity: 0; }
 }
 
-@keyframes rotate-border {
-  0%   { --angle: 0deg; }
-  100% { --angle: 360deg; }
-}
-
 @keyframes dot-pulse {
   0%, 100% { opacity: 0.08; }
   50%      { opacity: 0.18; }
 }
 
-/* ───── Utility classes ───── */
-.animate-gradient-x {
-  background-size: 200% 200%;
-  animation: gradient-x 4s ease-in-out infinite;
-}
+/* ───── Component classes ───── */
+@layer components {
+  .animate-gradient-x {
+    background-size: 200% 200%;
+    animation: gradient-x 4s ease-in-out infinite;
+  }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
 
-.font-mono-accent {
-  font-family: 'JetBrains Mono', monospace;
-}
+  .font-mono-accent {
+    font-family: 'JetBrains Mono', monospace;
+  }
 
-/* Dot-grid background */
-.dot-grid {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
+  /* Dot-grid background */
+  .dot-grid {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
 
-/* Glass card */
-.glass-card {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+  /* Glass card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  .glass-card:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(34, 211, 238, 0.4) !important;
+  }
 
-/* Magnetic hover (JS will handle movement, CSS handles transition) */
-.magnetic-hover {
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
+  /* Nav flex gap */
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-/* Spotlight card inner highlight */
-.spotlight-card {
-  position: relative;
-  overflow: hidden;
-}
-.spotlight-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    600px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
-    rgba(34, 211, 238, 0.06),
-    transparent 40%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-  z-index: 1;
-}
-.spotlight-card:hover::before {
-  opacity: 1;
+  /* Magnetic hover */
+  .magnetic-hover {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Spotlight card inner highlight */
+  .spotlight-card {
+    position: relative;
+    overflow: hidden;
+  }
+  .spotlight-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      600px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+      rgba(34, 211, 238, 0.06),
+      transparent 40%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .spotlight-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Project card */
+  .project-card {
+    background: rgba(23, 23, 23, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+  }
+  .project-card:hover {
+    border-color: rgba(34, 211, 238, 0.3) !important;
+    box-shadow: 0 0 40px rgba(34, 211, 238, 0.08);
+  }
+
+  /* Contact card */
+  .contact-card {
+    background: linear-gradient(to bottom, rgba(23, 23, 23, 0.9), rgba(0, 0, 0, 0.9)) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Counter grid */
+  .counter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  /* Skills grid */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+  @media (min-width: 768px) {
+    .skills-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .skills-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+
+  /* Projects grid */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  @media (min-width: 768px) {
+    .projects-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .projects-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* About grid */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  @media (min-width: 768px) {
+    .about-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Flex wrap for tech pills */
+  .tech-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* Contact buttons */
+  .contact-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  /* Tech tags inside project cards */
+  .tech-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Mobile menu stack */
+  .mobile-menu-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 16px 24px;
+  }
 }

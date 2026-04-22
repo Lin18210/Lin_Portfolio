@@ -7,47 +7,56 @@ function CustomCursor() {
   const cursorRef = useRef(null);
   const trailRef = useRef(null);
   const [hovering, setHovering] = useState(false);
+  const mouse = useRef({ x: 0, y: 0 });
+  const trail = useRef({ x: 0, y: 0 });
+  const rafId = useRef(null);
 
   useEffect(() => {
     const move = (e) => {
+      mouse.current.x = e.clientX;
+      mouse.current.y = e.clientY;
+      // Update main cursor instantly
       if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate(${e.clientX - 6}px, ${e.clientY - 6}px)`;
-      }
-      if (trailRef.current) {
-        trailRef.current.style.transform = `translate(${e.clientX - 18}px, ${e.clientY - 18}px)`;
+        cursorRef.current.style.transform = `translate3d(${e.clientX - 6}px, ${e.clientY - 6}px, 0)`;
       }
     };
 
-    const addHover = () => setHovering(true);
-    const removeHover = () => setHovering(false);
+    // Lerp-based trail animation for smooth following
+    const animateTrail = () => {
+      const speed = 0.15;
+      trail.current.x += (mouse.current.x - trail.current.x) * speed;
+      trail.current.y += (mouse.current.y - trail.current.y) * speed;
+      if (trailRef.current) {
+        trailRef.current.style.transform = `translate3d(${trail.current.x - 18}px, ${trail.current.y - 18}px, 0)`;
+      }
+      rafId.current = requestAnimationFrame(animateTrail);
+    };
 
-    window.addEventListener('mousemove', move);
-
-    const interactives = document.querySelectorAll('a, button, [role="button"], .magnetic-hover');
-    interactives.forEach((el) => {
-      el.addEventListener('mouseenter', addHover);
-      el.addEventListener('mouseleave', removeHover);
-    });
+    window.addEventListener('mousemove', move, { passive: true });
+    rafId.current = requestAnimationFrame(animateTrail);
 
     return () => {
       window.removeEventListener('mousemove', move);
-      interactives.forEach((el) => {
-        el.removeEventListener('mouseenter', addHover);
-        el.removeEventListener('mouseleave', removeHover);
-      });
+      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, []);
 
-  // Re-bind whenever DOM changes (sections scroll into view)
+  // Bind hover listeners and re-bind on DOM changes
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const addHover = () => setHovering(true);
-      const removeHover = () => setHovering(false);
+    const addHover = () => setHovering(true);
+    const removeHover = () => setHovering(false);
+
+    const bindAll = () => {
       document.querySelectorAll('a, button, [role="button"], .magnetic-hover').forEach((el) => {
+        el.removeEventListener('mouseenter', addHover);
+        el.removeEventListener('mouseleave', removeHover);
         el.addEventListener('mouseenter', addHover);
         el.addEventListener('mouseleave', removeHover);
       });
-    });
+    };
+
+    bindAll();
+    const observer = new MutationObserver(bindAll);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
@@ -249,9 +258,10 @@ function SpotlightCard({ children, className = '' }) {
 export default function Portfolio() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [scrollY, setScrollY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const glowRef = useRef(null);
+  const mouseRef = useRef({ x: 0, y: 0 });
 
   const typedText = useTypewriter(
     ['Full Stack Developer', 'UI/UX Enthusiast', 'Problem Solver', 'React Specialist'],
@@ -300,12 +310,17 @@ export default function Portfolio() {
       if (current) setActiveSection(current);
     };
 
+    // Use direct DOM manipulation for glow — no React re-renders
     const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
+      mouseRef.current.x = e.clientX;
+      mouseRef.current.y = e.clientY;
+      if (glowRef.current) {
+        glowRef.current.style.transform = `translate3d(${e.clientX - 250}px, ${e.clientY - 250}px, 0)`;
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handleMouseMove);
@@ -475,14 +490,18 @@ export default function Portfolio() {
           />
         ))}
 
-        {/* Mouse Follow Glow */}
-        <motion.div
-          className="absolute w-[500px] h-[500px] bg-cyan-500/8 rounded-full blur-[100px] mix-blend-screen"
-          animate={{
-            x: mousePosition.x - 250,
-            y: mousePosition.y - 250
+        {/* Mouse Follow Glow — ref-based, no re-renders */}
+        <div
+          ref={glowRef}
+          className="absolute rounded-full mix-blend-screen"
+          style={{
+            width: 500,
+            height: 500,
+            background: 'rgba(6, 182, 212, 0.08)',
+            filter: 'blur(100px)',
+            willChange: 'transform',
+            transition: 'transform 0.3s ease-out',
           }}
-          transition={{ type: "tween", ease: "backOut", duration: 0.5 }}
         />
 
         {/* Aurora blobs */}
@@ -512,12 +531,12 @@ export default function Portfolio() {
               className="text-xl font-bold tracking-tighter cursor-pointer group"
             >
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 font-mono-accent text-lg group-hover:from-white group-hover:to-cyan-300 transition-all duration-300">
-                &lt;LTT /&gt;
+                &lt;Welcome&gt;
               </span>
             </motion.div>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex space-x-2">
+            <div className="hidden md:flex nav-links">
               {['home', 'about', 'skills', 'projects', 'contact'].map((item, i) => (
                 <motion.button
                   key={item}
@@ -559,7 +578,7 @@ export default function Portfolio() {
               exit={{ height: 0, opacity: 0 }}
               className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10 overflow-hidden"
             >
-              <div className="px-4 pt-4 pb-6 space-y-2">
+              <div className="mobile-menu-stack">
                 {['home', 'about', 'skills', 'projects', 'contact'].map((item, idx) => (
                   <motion.button
                     key={item}
@@ -715,7 +734,8 @@ export default function Portfolio() {
           <motion.div
             initial="hidden" whileInView="visible" viewport={{ once: true }}
             variants={staggerContainer}
-            className="grid grid-cols-3 gap-6 mb-16"
+            className="counter-grid"
+            style={{ marginBottom: '64px' }}
           >
             <motion.div variants={fadeInUp}>
               <AnimatedCounter target={12} suffix="+" label="Projects" />
@@ -728,14 +748,14 @@ export default function Portfolio() {
             </motion.div>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-10">
+          <div className="about-grid">
             <motion.div
               initial="hidden" whileInView="visible" viewport={{ once: true }}
               variants={staggerContainer}
-              className="space-y-8"
+              style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
             >
               <motion.div variants={fadeInUp}>
-                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                <TiltCard className="group glass-card" style={{ padding: '32px', borderRadius: '16px' }}>
                   <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
                     <span className="text-3xl">👨‍💻</span> Who I Am
                   </h3>
@@ -748,7 +768,7 @@ export default function Portfolio() {
               </motion.div>
 
               <motion.div variants={fadeInUp}>
-                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                <TiltCard className="group glass-card" style={{ padding: '32px', borderRadius: '16px' }}>
                   <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
                     <span className="text-3xl">🎯</span> What I Do
                   </h3>
@@ -763,14 +783,14 @@ export default function Portfolio() {
             <motion.div
               initial="hidden" whileInView="visible" viewport={{ once: true }}
               variants={staggerContainer}
-              className="space-y-8"
+              style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
             >
               <motion.div variants={fadeInUp}>
-                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                <TiltCard className="group glass-card" style={{ padding: '32px', borderRadius: '16px' }}>
                   <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
                     <span className="text-3xl">🎓</span> Education
                   </h3>
-                  <div className="space-y-6">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     <div className="border-l-2 border-cyan-500/30 pl-4 hover:border-cyan-400 transition-colors duration-300">
                       <p className="font-bold text-lg text-white">Bachelor of Computer Science</p>
                       <p className="text-gray-400">Coventry University UK (Singapore)</p>
@@ -786,11 +806,11 @@ export default function Portfolio() {
               </motion.div>
 
               <motion.div variants={fadeInUp}>
-                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                <TiltCard className="group glass-card" style={{ padding: '32px', borderRadius: '16px' }}>
                   <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
                     <span className="text-3xl">🏆</span> Certifications
                   </h3>
-                  <div className="space-y-3">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {[
                       "Professional Scrum Master I (PSM I)",
                       "JavaScript Foundations - Mozilla",
@@ -828,7 +848,7 @@ export default function Portfolio() {
           </motion.div>
 
           {/* Radial Gauges */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-16">
+          <div className="skills-grid" style={{ marginBottom: '64px' }}>
             {skills.map((skill, index) => (
               <RadialGauge key={index} name={skill.name} level={skill.level} delay={index * 0.1} />
             ))}
@@ -838,7 +858,7 @@ export default function Portfolio() {
           <motion.div
             initial="hidden" whileInView="visible" viewport={{ once: true }}
             variants={staggerContainer}
-            className="flex flex-wrap justify-center gap-3"
+            className="tech-pills"
           >
             {['React', 'Next.js', 'TypeScript', 'Node.js', 'Python', 'PostgreSQL', 'MongoDB', 'Firebase', 'AWS', 'Docker', 'Git', 'TailwindCSS', 'Framer Motion', 'Stripe API', 'REST API', 'GraphQL'].map((tech, i) => (
               <motion.span
@@ -869,7 +889,7 @@ export default function Portfolio() {
             <motion.p variants={fadeInUp} className="text-gray-400 text-lg">A collection of my recent projects and experiments</motion.p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="projects-grid">
             {projects.map((project, index) => (
               <motion.div
                 key={index}
@@ -879,7 +899,7 @@ export default function Portfolio() {
                 transition={{ delay: index * 0.08, duration: 0.6 }}
                 whileHover={{ y: -10, transition: { duration: 0.2 } }}
               >
-                <SpotlightCard className="bg-neutral-900/80 border border-white/5 rounded-xl overflow-hidden hover:border-cyan-500/30 hover:shadow-[0_0_40px_rgba(34,211,238,0.08)] group flex flex-col h-full transition-all duration-500">
+                <SpotlightCard className="project-card group">
                   {/* Gradient bar with animated width on hover */}
                   <div className={`h-1.5 w-full bg-gradient-to-r ${project.gradient} group-hover:h-2 transition-all duration-300`} />
                   <div className="p-8 flex-1 flex flex-col relative z-10">
@@ -890,7 +910,7 @@ export default function Portfolio() {
                     <p className="text-gray-400 mb-6 text-sm leading-relaxed flex-1">{project.description}</p>
 
                     <div className="mb-6">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="tech-tags">
                         {project.technologies.map((tech, i) => (
                           <span
                             key={i}
@@ -902,7 +922,7 @@ export default function Portfolio() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                       <a
                         href={project.githubUrl}
                         target="_blank"
@@ -957,7 +977,8 @@ export default function Portfolio() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto text-center relative z-10 bg-gradient-to-b from-neutral-900/90 to-black/90 backdrop-blur-xl p-12 rounded-3xl border border-white/10 shadow-2xl"
+          className="contact-card relative z-10"
+          style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center', padding: '48px' }}
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -974,7 +995,7 @@ export default function Portfolio() {
             I'm currently looking for new opportunities. Whether you have a question or just want to say hi, I'll try my best to get back to you!
           </p>
 
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="contact-buttons">
             <motion.a
               whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(255,255,255,0.3)' }}
               whileTap={{ scale: 0.95 }}
@@ -991,7 +1012,8 @@ export default function Portfolio() {
               href="https://github.com/Lin18210"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 px-8 py-4 border border-white/20 bg-white/5 backdrop-blur-sm rounded-full font-bold text-lg text-white hover:bg-white/10 transition-all duration-300"
+              className="group flex items-center rounded-full font-bold text-lg text-white transition-all duration-300"
+              style={{ gap: '12px', padding: '16px 32px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)' }}
             >
               <Github className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               <span>GitHub</span>
@@ -1002,14 +1024,15 @@ export default function Portfolio() {
               href="https://linkedin.com/in/lin-thit-thwe"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 px-8 py-4 border border-blue-600/30 bg-blue-600/10 rounded-full font-bold text-lg text-blue-400 hover:bg-blue-600/20 transition-all duration-300"
+              className="group flex items-center rounded-full font-bold text-lg text-blue-400 transition-all duration-300"
+              style={{ gap: '12px', padding: '16px 32px', border: '1px solid rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.1)' }}
             >
               <Linkedin className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               <span>LinkedIn</span>
             </motion.a>
           </div>
 
-          <div className="mt-12 pt-8 border-t border-white/5 text-gray-500">
+          <div className="text-gray-500" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <p className="mb-2 hover:text-gray-300 transition-colors">📞 +66 95 020 2284</p>
             <p className="hover:text-gray-300 transition-colors">📍 Bangkok, Thailand</p>
           </div>
@@ -1017,7 +1040,7 @@ export default function Portfolio() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-8 px-4 border-t border-white/10 text-center text-gray-500 bg-black relative z-10 text-sm">
+      <footer className="relative z-10 text-gray-500 text-sm" style={{ padding: '32px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', background: '#000' }}>
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
