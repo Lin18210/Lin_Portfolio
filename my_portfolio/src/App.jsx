@@ -1,16 +1,266 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Github, ExternalLink, Menu, X, Code, Mail, Linkedin, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Github, ExternalLink, Menu, X, Code, Mail, Linkedin, ChevronDown, Sparkles, Zap, Globe } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 
+// ─── Custom Cursor Component ───
+function CustomCursor() {
+  const cursorRef = useRef(null);
+  const trailRef = useRef(null);
+  const [hovering, setHovering] = useState(false);
+
+  useEffect(() => {
+    const move = (e) => {
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate(${e.clientX - 6}px, ${e.clientY - 6}px)`;
+      }
+      if (trailRef.current) {
+        trailRef.current.style.transform = `translate(${e.clientX - 18}px, ${e.clientY - 18}px)`;
+      }
+    };
+
+    const addHover = () => setHovering(true);
+    const removeHover = () => setHovering(false);
+
+    window.addEventListener('mousemove', move);
+
+    const interactives = document.querySelectorAll('a, button, [role="button"], .magnetic-hover');
+    interactives.forEach((el) => {
+      el.addEventListener('mouseenter', addHover);
+      el.addEventListener('mouseleave', removeHover);
+    });
+
+    return () => {
+      window.removeEventListener('mousemove', move);
+      interactives.forEach((el) => {
+        el.removeEventListener('mouseenter', addHover);
+        el.removeEventListener('mouseleave', removeHover);
+      });
+    };
+  }, []);
+
+  // Re-bind whenever DOM changes (sections scroll into view)
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const addHover = () => setHovering(true);
+      const removeHover = () => setHovering(false);
+      document.querySelectorAll('a, button, [role="button"], .magnetic-hover').forEach((el) => {
+        el.addEventListener('mouseenter', addHover);
+        el.addEventListener('mouseleave', removeHover);
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <>
+      <div ref={cursorRef} className={`custom-cursor ${hovering ? 'hovering' : ''}`} />
+      <div ref={trailRef} className={`cursor-trail ${hovering ? 'hovering' : ''}`} />
+    </>
+  );
+}
+
+// ─── Typewriter Hook ───
+function useTypewriter(words, typingSpeed = 100, deletingSpeed = 60, pause = 2000) {
+  const [text, setText] = useState('');
+  const [wordIndex, setWordIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = words[wordIndex];
+    let timeout;
+
+    if (!isDeleting && text === current) {
+      timeout = setTimeout(() => setIsDeleting(true), pause);
+    } else if (isDeleting && text === '') {
+      setIsDeleting(false);
+      setWordIndex((prev) => (prev + 1) % words.length);
+    } else {
+      timeout = setTimeout(() => {
+        setText(current.substring(0, text.length + (isDeleting ? -1 : 1)));
+      }, isDeleting ? deletingSpeed : typingSpeed);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [text, isDeleting, wordIndex, words, typingSpeed, deletingSpeed, pause]);
+
+  return text;
+}
+
+// ─── Tilt Card Component ───
+function TiltCard({ children, className = '' }) {
+  const ref = useRef(null);
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const springX = useSpring(rotateX, { stiffness: 200, damping: 20 });
+  const springY = useSpring(rotateY, { stiffness: 200, damping: 20 });
+
+  const handleMove = (e) => {
+    const rect = ref.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    rotateX.set((y - centerY) / 12 * -1);
+    rotateY.set((x - centerX) / 12);
+  };
+
+  const handleLeave = () => {
+    rotateX.set(0);
+    rotateY.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={{ rotateX: springX, rotateY: springY, transformPerspective: 800 }}
+      className={`${className} magnetic-hover`}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ─── Animated Counter ───
+function AnimatedCounter({ target, suffix = '', label }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated.current) {
+          hasAnimated.current = true;
+          let start = 0;
+          const duration = 2000;
+          const startTime = performance.now();
+          const animate = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.round(eased * target));
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target]);
+
+  return (
+    <div ref={ref} className="text-center">
+      <div className="text-4xl md:text-5xl font-black text-cyan-400 font-mono-accent">
+        {count}{suffix}
+      </div>
+      <div className="text-sm text-gray-400 mt-2 uppercase tracking-widest">{label}</div>
+    </div>
+  );
+}
+
+// ─── Radial Skill Gauge ───
+function RadialGauge({ name, level, delay = 0 }) {
+  const [visible, setVisible] = useState(false);
+  const ref = useRef(null);
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.4 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.8 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.5 }}
+      className="flex flex-col items-center gap-3 group"
+    >
+      <div className="relative w-32 h-32">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+          <motion.circle
+            cx="60" cy="60" r={radius}
+            fill="none"
+            stroke="url(#gaugeGradient)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={visible ? { strokeDashoffset: circumference * (1 - level / 100) } : {}}
+            transition={{ duration: 1.8, ease: 'easeOut', delay: delay + 0.2 }}
+          />
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#06b6d4" />
+              <stop offset="100%" stopColor="#3b82f6" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-bold text-white font-mono-accent group-hover:text-cyan-400 transition-colors">
+            {level}%
+          </span>
+        </div>
+      </div>
+      <span className="text-sm font-semibold text-gray-300 group-hover:text-cyan-400 transition-colors text-center">
+        {name}
+      </span>
+    </motion.div>
+  );
+}
+
+// ─── Spotlight Project Card ───
+function SpotlightCard({ children, className = '' }) {
+  const ref = useRef(null);
+
+  const handleMove = (e) => {
+    const rect = ref.current.getBoundingClientRect();
+    ref.current.style.setProperty('--spotlight-x', `${e.clientX - rect.left}px`);
+    ref.current.style.setProperty('--spotlight-y', `${e.clientY - rect.top}px`);
+  };
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMove}
+      className={`spotlight-card ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// MAIN PORTFOLIO COMPONENT
+// ──────────────────────────────────────────────
 export default function Portfolio() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [scrollY, setScrollY] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
-  // Generate stars for background
+  const typedText = useTypewriter(
+    ['Full Stack Developer', 'UI/UX Enthusiast', 'Problem Solver', 'React Specialist'],
+    90, 50, 2200
+  );
+
+  // Generate starfield
   const stars = useMemo(() => {
-    return Array.from({ length: 50 }).map((_, i) => ({
+    return Array.from({ length: 60 }).map((_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
@@ -20,9 +270,24 @@ export default function Portfolio() {
     }));
   }, []);
 
+  // Orbit dots for hero
+  const orbitDots = useMemo(() => {
+    return Array.from({ length: 6 }).map((_, i) => ({
+      id: i,
+      delay: i * 1.2,
+      duration: 8 + i * 2,
+      size: 4 + Math.random() * 4,
+      distance: 55 + i * 12,
+      color: i % 2 === 0 ? 'bg-cyan-400' : 'bg-blue-400'
+    }));
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(docHeight > 0 ? window.scrollY / docHeight : 0);
+
       const sections = ['home', 'about', 'skills', 'projects', 'contact'];
       const current = sections.find(section => {
         const element = document.getElementById(section);
@@ -63,9 +328,7 @@ export default function Portfolio() {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
+      transition: { staggerChildren: 0.15 }
     }
   };
 
@@ -134,7 +397,6 @@ export default function Portfolio() {
       liveUrl: "https://frontend-travel-tau.vercel.app/",
       gradient: "from-emerald-400 to-cyan-500"
     },
-    
     {
       title: "Cafe Menu Order App",
       description: "A collaborative order management application with real-time updates, check-out functionality, and filtering features.",
@@ -179,8 +441,18 @@ export default function Portfolio() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden selection:bg-cyan-500/30 font-sans">
-      {/* Dynamic Background */}
+    <div className="min-h-screen bg-black text-white overflow-hidden selection:bg-cyan-500/30 font-sans dot-grid">
+
+      {/* Custom Cursor */}
+      <CustomCursor />
+
+      {/* Scroll Progress Bar */}
+      <motion.div
+        className="fixed top-0 left-0 h-[3px] bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 z-[60] origin-left"
+        style={{ scaleX: scrollProgress, transformOrigin: '0% 0%' }}
+      />
+
+      {/* ── Dynamic Background ── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         {stars.map((star) => (
           <motion.div
@@ -202,10 +474,10 @@ export default function Portfolio() {
             }}
           />
         ))}
-        
+
         {/* Mouse Follow Glow */}
-        <motion.div 
-          className="absolute w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[100px] mix-blend-screen"
+        <motion.div
+          className="absolute w-[500px] h-[500px] bg-cyan-500/8 rounded-full blur-[100px] mix-blend-screen"
           animate={{
             x: mousePosition.x - 250,
             y: mousePosition.y - 250
@@ -213,26 +485,39 @@ export default function Portfolio() {
           transition={{ type: "tween", ease: "backOut", duration: 0.5 }}
         />
 
-        <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-blue-900/20 to-transparent blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-900/20 rounded-full blur-[120px]"></div>
+        {/* Aurora blobs */}
+        <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-blue-900/20 to-transparent blur-3xl" />
+        <div
+          className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-900/20 rounded-full blur-[120px]"
+          style={{ animation: 'aurora 12s ease-in-out infinite' }}
+        />
+        <div
+          className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-cyan-900/10 rounded-full blur-[140px]"
+          style={{ animation: 'aurora 16s ease-in-out infinite reverse' }}
+        />
       </div>
 
-      {/* Navigation */}
-      <motion.nav 
+      {/* ── Navigation ── */}
+      <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-black/80 backdrop-blur-xl border-b border-white/10' : 'bg-transparent'}`}
+        transition={{ duration: 0.5, type: 'spring', stiffness: 100 }}
+        className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrollY > 50 ? 'bg-black/70 backdrop-blur-2xl border-b border-white/10 shadow-2xl shadow-black/50' : 'bg-transparent'}`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            {/* Logo Area (Empty as requested) */}
-            <div className="text-xl font-bold tracking-tighter hover:tracking-wide transition-all duration-300 cursor-pointer group">
-              
-            </div>
-            
+            {/* Logo */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="text-xl font-bold tracking-tighter cursor-pointer group"
+            >
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 font-mono-accent text-lg group-hover:from-white group-hover:to-cyan-300 transition-all duration-300">
+                &lt;LTT /&gt;
+              </span>
+            </motion.div>
+
             {/* Desktop Menu */}
-            <div className="hidden md:flex space-x-8">
+            <div className="hidden md:flex space-x-2">
               {['home', 'about', 'skills', 'projects', 'contact'].map((item, i) => (
                 <motion.button
                   key={item}
@@ -240,50 +525,56 @@ export default function Portfolio() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 + 0.3 }}
                   onClick={() => scrollToSection(item)}
-                  className={`capitalize text-sm font-medium tracking-wide hover:text-cyan-400 transition-colors duration-300 relative group ${
-                    activeSection === item ? 'text-cyan-400' : 'text-gray-300'
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`capitalize text-sm font-medium tracking-wide px-4 py-2 rounded-full transition-all duration-300 relative ${
+                    activeSection === item
+                      ? 'text-cyan-400 bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.15)]'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   {item}
-                  <span className={`absolute -bottom-2 left-0 w-full h-0.5 bg-cyan-400 transform transition-transform duration-300 origin-left ${
-                    activeSection === item ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
-                  }`}></span>
                 </motion.button>
               ))}
             </div>
 
             {/* Mobile Menu Button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               className="md:hidden text-white hover:text-cyan-400 transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            </motion.button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         <AnimatePresence>
           {isMenuOpen && (
-            <motion.div 
+            <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10 overflow-hidden"
             >
               <div className="px-4 pt-4 pb-6 space-y-2">
-                {['home', 'about', 'skills', 'projects', 'contact'].map((item) => (
-                  <button
+                {['home', 'about', 'skills', 'projects', 'contact'].map((item, idx) => (
+                  <motion.button
                     key={item}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
                     onClick={() => scrollToSection(item)}
                     className={`block w-full text-left px-4 py-3 capitalize text-lg font-medium rounded-lg transition-all duration-300 ${
-                      activeSection === item 
-                        ? 'bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-400' 
+                      activeSection === item
+                        ? 'bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-400'
                         : 'text-gray-400 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     {item}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </motion.div>
@@ -291,354 +582,453 @@ export default function Portfolio() {
         </AnimatePresence>
       </motion.nav>
 
-      {/* Hero Section */}
+      {/* ════════════════════════════════════════════
+           HERO SECTION
+         ════════════════════════════════════════════ */}
       <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-        <motion.div 
+        <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
           className="max-w-5xl mx-auto px-4 text-center relative z-10"
         >
+          {/* Code icon with orbit dots */}
           <motion.div variants={fadeInUp} className="mb-8 relative inline-block group">
-            <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-full group-hover:bg-cyan-500/40 transition-all duration-500"></div>
+            <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-full group-hover:bg-cyan-500/40 transition-all duration-500" />
             <Code className="w-24 h-24 mx-auto text-cyan-400 relative z-10 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)] group-hover:scale-110 transition-transform duration-500" />
+
+            {/* Orbiting dots */}
+            {orbitDots.map((dot) => (
+              <div
+                key={dot.id}
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                style={{
+                  width: dot.distance * 2,
+                  height: dot.distance * 2,
+                  animation: `orbit ${dot.duration}s linear infinite`,
+                  animationDelay: `${dot.delay}s`,
+                }}
+              >
+                <div
+                  className={`${dot.color} rounded-full absolute top-0 left-1/2 -translate-x-1/2 opacity-60`}
+                  style={{ width: dot.size, height: dot.size }}
+                />
+              </div>
+            ))}
           </motion.div>
 
-          <motion.h1 
+          {/* Name with hover glitch feel */}
+          <motion.h1
             variants={fadeInUp}
-            className="text-5xl md:text-8xl font-black mb-6 tracking-tight"
+            className="text-5xl md:text-8xl font-black mb-6 tracking-tight group"
           >
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-100 to-gray-400 animate-gradient-x">
+            <motion.span
+              className="bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-100 to-gray-400 animate-gradient-x inline-block"
+              whileHover={{
+                textShadow: [
+                  '0 0 0px transparent',
+                  '3px 0 0px rgba(34,211,238,0.4), -3px 0 0px rgba(168,85,247,0.4)',
+                  '-2px 0 0px rgba(34,211,238,0.4), 2px 0 0px rgba(168,85,247,0.4)',
+                  '0 0 0px transparent'
+                ],
+                transition: { duration: 0.4 }
+              }}
+            >
               Lin Thit Thwe
-            </span>
+            </motion.span>
           </motion.h1>
 
-          <motion.div variants={fadeInUp} className="h-0.5 w-24 bg-cyan-500/50 mx-auto mb-8 rounded-full" />
+          <motion.div variants={fadeInUp} className="h-0.5 w-24 bg-gradient-to-r from-cyan-500 to-blue-500 mx-auto mb-8 rounded-full" />
 
-          <motion.h2 
+          {/* Typewriter subtitle */}
+          <motion.h2
             variants={fadeInUp}
-            className="text-2xl md:text-3xl font-light mb-8 text-cyan-400 tracking-widest uppercase"
+            className="text-2xl md:text-3xl font-light mb-8 text-cyan-400 tracking-widest uppercase h-[40px] md:h-[44px]"
           >
-            Full Stack Web Developer
+            {typedText}
+            <span className="inline-block w-[3px] h-[1em] bg-cyan-400 ml-1 align-text-bottom" style={{ animation: 'blink 1s step-end infinite' }} />
           </motion.h2>
-          
-          <motion.p 
+
+          <motion.p
             variants={fadeInUp}
             className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed"
           >
             Crafting immersive, high-performance web experiences with modern architecture and stunning designs.
             <span className="block mt-2 text-sm text-cyan-500/80">Based in Bangkok, Thailand 📍</span>
           </motion.p>
-          
-          <motion.div 
-            variants={fadeInUp} 
+
+          <motion.div
+            variants={fadeInUp}
             className="flex flex-col sm:flex-row justify-center gap-6"
           >
             <motion.button
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, boxShadow: '0 0 35px rgba(34,211,238,0.4)' }}
               whileTap={{ scale: 0.95 }}
               onClick={() => scrollToSection('projects')}
-              className="px-10 py-4 bg-white text-black rounded-full font-bold text-lg shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] relative overflow-hidden group"
+              className="px-10 py-4 bg-white text-black rounded-full font-bold text-lg shadow-[0_0_20px_rgba(255,255,255,0.3)] relative overflow-hidden group"
             >
-              <span className="relative z-10">View Projects</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                View Projects
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+              {/* Pulse ring */}
+              <div className="absolute inset-0 rounded-full border-2 border-white/30" style={{ animation: 'pulse-ring 2s ease-out infinite' }} />
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, borderColor: 'rgba(34,211,238,0.5)' }}
               whileTap={{ scale: 0.95 }}
               onClick={() => scrollToSection('contact')}
-              className="px-10 py-4 border border-white/20 bg-white/5 backdrop-blur-sm rounded-full font-bold text-lg text-white hover:bg-white/10 hover:border-white/50 shadow-lg"
+              className="px-10 py-4 border border-white/20 bg-white/5 backdrop-blur-sm rounded-full font-bold text-lg text-white hover:bg-white/10 shadow-lg transition-all duration-300"
             >
               Contact Me
             </motion.button>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: [0, 10, 0] }}
             transition={{ delay: 2, duration: 2, repeat: Infinity }}
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 cursor-pointer" 
+            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 cursor-pointer"
             onClick={() => scrollToSection('about')}
           >
-            <ChevronDown className="w-10 h-10 text-white" />
+            <ChevronDown className="w-10 h-10 text-white/60 hover:text-cyan-400 transition-colors" />
           </motion.div>
         </motion.div>
       </section>
 
-      {/* About Section */}
+      {/* ════════════════════════════════════════════
+           ABOUT SECTION
+         ════════════════════════════════════════════ */}
       <section id="about" className="py-24 px-4 relative">
         <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+          <motion.div
+            initial="hidden" whileInView="visible" viewport={{ once: true }}
             variants={staggerContainer}
             className="text-center mb-16"
           >
             <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-white mb-4">About Me</motion.h2>
-            <motion.div variants={fadeInUp} className="h-1 w-20 bg-cyan-500 mx-auto rounded-full"></motion.div>
+            <motion.div variants={fadeInUp} className="h-1 w-20 bg-gradient-to-r from-cyan-500 to-blue-500 mx-auto rounded-full" />
           </motion.div>
-          
+
+          {/* Animated Counters */}
+          <motion.div
+            initial="hidden" whileInView="visible" viewport={{ once: true }}
+            variants={staggerContainer}
+            className="grid grid-cols-3 gap-6 mb-16"
+          >
+            <motion.div variants={fadeInUp}>
+              <AnimatedCounter target={12} suffix="+" label="Projects" />
+            </motion.div>
+            <motion.div variants={fadeInUp}>
+              <AnimatedCounter target={3} suffix="+" label="Years Exp" />
+            </motion.div>
+            <motion.div variants={fadeInUp}>
+              <AnimatedCounter target={10} suffix="+" label="Clients" />
+            </motion.div>
+          </motion.div>
+
           <div className="grid md:grid-cols-2 gap-10">
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
+            <motion.div
+              initial="hidden" whileInView="visible" viewport={{ once: true }}
               variants={staggerContainer}
               className="space-y-8"
             >
-              <motion.div variants={fadeInUp} className="group p-8 bg-white/5 rounded-2xl border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 transition-colors duration-300">
-                <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
-                  <span className="text-3xl">👨‍💻</span> Who I Am
-                </h3>
-                <p className="text-gray-300 leading-relaxed text-lg">
-                  Experienced full-stack developer with strong proficiency in JavaScript and Python. 
-                  I specialize in building modern, scalable web applications using React, Node.js, and creating 
-                  seamless user experiences effectively.
-                </p>
+              <motion.div variants={fadeInUp}>
+                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                  <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
+                    <span className="text-3xl">👨‍💻</span> Who I Am
+                  </h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">
+                    Experienced full-stack developer with strong proficiency in JavaScript and Python. 
+                    I specialize in building modern, scalable web applications using React, Node.js, and creating 
+                    seamless user experiences effectively.
+                  </p>
+                </TiltCard>
               </motion.div>
-              
-              <motion.div variants={fadeInUp} className="group p-8 bg-white/5 rounded-2xl border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 transition-colors duration-300">
-                <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
-                  <span className="text-3xl">🎯</span> What I Do
-                </h3>
-                <p className="text-gray-300 leading-relaxed text-lg">
-                  From e-commerce platforms to booking systems and real-time chat applications, 
-                  I bring ideas to life with clean code and high attention to detail.
-                </p>
+
+              <motion.div variants={fadeInUp}>
+                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                  <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
+                    <span className="text-3xl">🎯</span> What I Do
+                  </h3>
+                  <p className="text-gray-300 leading-relaxed text-lg">
+                    From e-commerce platforms to booking systems and real-time chat applications, 
+                    I bring ideas to life with clean code and high attention to detail.
+                  </p>
+                </TiltCard>
               </motion.div>
             </motion.div>
 
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
+            <motion.div
+              initial="hidden" whileInView="visible" viewport={{ once: true }}
               variants={staggerContainer}
               className="space-y-8"
             >
-              <motion.div variants={fadeInUp} className="group p-8 bg-white/5 rounded-2xl border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 transition-colors duration-300">
-                <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
-                  <span className="text-3xl">🎓</span> Education
-                </h3>
-                <div className="space-y-6">
-                  <div className="border-l-2 border-cyan-500/30 pl-4">
-                    <p className="font-bold text-lg text-white">Bachelor of Computer Science</p>
-                    <p className="text-gray-400">Coventry University UK (Singapore)</p>
-                    <p className="text-sm text-cyan-500 font-mono mt-1">2023 - 2025</p>
+              <motion.div variants={fadeInUp}>
+                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                  <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
+                    <span className="text-3xl">🎓</span> Education
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="border-l-2 border-cyan-500/30 pl-4 hover:border-cyan-400 transition-colors duration-300">
+                      <p className="font-bold text-lg text-white">Bachelor of Computer Science</p>
+                      <p className="text-gray-400">Coventry University UK (Singapore)</p>
+                      <p className="text-sm text-cyan-500 font-mono-accent mt-1">2023 - 2025</p>
+                    </div>
+                    <div className="border-l-2 border-cyan-500/30 pl-4 hover:border-cyan-400 transition-colors duration-300">
+                      <p className="font-bold text-lg text-white">Diploma in Infocomm Technology</p>
+                      <p className="text-gray-400">PSB Academy (Singapore)</p>
+                      <p className="text-sm text-cyan-500 font-mono-accent mt-1">2022 - 2023</p>
+                    </div>
                   </div>
-                  <div className="border-l-2 border-cyan-500/30 pl-4">
-                    <p className="font-bold text-lg text-white">Diploma in Infocomm Technology</p>
-                    <p className="text-gray-400">PSB Academy (Singapore)</p>
-                    <p className="text-sm text-cyan-500 font-mono mt-1">2022 - 2023</p>
-                  </div>
-                </div>
+                </TiltCard>
               </motion.div>
 
-              <motion.div variants={fadeInUp} className="group p-8 bg-white/5 rounded-2xl border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 transition-colors duration-300">
-                <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
-                  <span className="text-3xl">🏆</span> Certifications
-                </h3>
-                <div className="space-y-3">
-                  {[
-                    "Professional Scrum Master I (PSM I)",
-                    "JavaScript Foundations - Mozilla",
-                    "Responsive Web Design"
-                  ].map((cert, i) => (
-                    <div key={i} className="flex items-center gap-3 text-gray-300">
-                      <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
-                      <span>{cert}</span>
-                    </div>
-                  ))}
-                </div>
+              <motion.div variants={fadeInUp}>
+                <TiltCard className="group p-8 glass-card rounded-2xl hover:border-cyan-500/50 hover:bg-white/8 transition-all duration-300">
+                  <h3 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-3">
+                    <span className="text-3xl">🏆</span> Certifications
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      "Professional Scrum Master I (PSM I)",
+                      "JavaScript Foundations - Mozilla",
+                      "Responsive Web Design"
+                    ].map((cert, i) => (
+                      <motion.div
+                        key={i}
+                        whileHover={{ x: 6 }}
+                        className="flex items-center gap-3 text-gray-300 hover:text-cyan-400 transition-colors cursor-default"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                        <span>{cert}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </TiltCard>
               </motion.div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Skills Section */}
+      {/* ════════════════════════════════════════════
+           SKILLS SECTION
+         ════════════════════════════════════════════ */}
       <section id="skills" className="py-24 px-4 bg-neutral-900/30 relative">
         <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+          <motion.div
+            initial="hidden" whileInView="visible" viewport={{ once: true }}
             variants={staggerContainer}
             className="text-center mb-16"
           >
             <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-white mb-4">Skills & Tech</motion.h2>
-            <motion.div variants={fadeInUp} className="h-1 w-20 bg-cyan-500 mx-auto rounded-full"></motion.div>
+            <motion.div variants={fadeInUp} className="h-1 w-20 bg-gradient-to-r from-cyan-500 to-blue-500 mx-auto rounded-full" />
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">
+          {/* Radial Gauges */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-16">
             {skills.map((skill, index) => (
-              <motion.div 
-                key={index} 
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="group"
-              >
-                <div className="flex justify-between mb-2">
-                  <span className="font-semibold text-lg text-gray-200 group-hover:text-cyan-400 transition-colors">{skill.name}</span>
-                  <span className="text-cyan-400 font-mono font-bold">{skill.level}%</span>
-                </div>
-                <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    whileInView={{ width: `${skill.level}%` }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-cyan-600 to-blue-500 rounded-full relative"
-                  >
-                    <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
-                  </motion.div>
-                </div>
-              </motion.div>
+              <RadialGauge key={index} name={skill.name} level={skill.level} delay={index * 0.1} />
             ))}
           </div>
+
+          {/* Floating Tech Pills */}
+          <motion.div
+            initial="hidden" whileInView="visible" viewport={{ once: true }}
+            variants={staggerContainer}
+            className="flex flex-wrap justify-center gap-3"
+          >
+            {['React', 'Next.js', 'TypeScript', 'Node.js', 'Python', 'PostgreSQL', 'MongoDB', 'Firebase', 'AWS', 'Docker', 'Git', 'TailwindCSS', 'Framer Motion', 'Stripe API', 'REST API', 'GraphQL'].map((tech, i) => (
+              <motion.span
+                key={tech}
+                variants={fadeInUp}
+                whileHover={{ scale: 1.12, y: -4, boxShadow: '0 8px 25px rgba(34,211,238,0.2)' }}
+                className="px-4 py-2 glass-card rounded-full text-sm font-medium text-gray-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all duration-300 cursor-default"
+                style={{ animationDelay: `${i * 0.5}s` }}
+              >
+                {tech}
+              </motion.span>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* Projects Section */}
+      {/* ════════════════════════════════════════════
+           PROJECTS SECTION
+         ════════════════════════════════════════════ */}
       <section id="projects" className="py-24 px-4 relative">
         <div className="max-w-7xl mx-auto relative z-10">
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+          <motion.div
+            initial="hidden" whileInView="visible" viewport={{ once: true }}
             variants={staggerContainer}
             className="text-center mb-16"
           >
             <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-white mb-4">Featured Work</motion.h2>
             <motion.p variants={fadeInUp} className="text-gray-400 text-lg">A collection of my recent projects and experiments</motion.p>
           </motion.div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {projects.map((project, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 50, rotateY: index % 2 === 0 ? -5 : 5 }}
+                whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.08, duration: 0.6 }}
                 whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                className="bg-neutral-900 border border-white/5 rounded-xl overflow-hidden hover:border-cyan-500/30 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] group flex flex-col h-full"
               >
-                <div className={`h-1.5 w-full bg-gradient-to-r ${project.gradient}`}></div>
-                <div className="p-8 flex-1 flex flex-col">
-                  <h3 className="text-xl font-bold mb-3 text-white group-hover:text-cyan-400 transition-colors">{project.title}</h3>
-                  <p className="text-gray-400 mb-6 text-sm leading-relaxed flex-1">{project.description}</p>
-                  
-                  <div className="mb-6">
-                    <div className="flex flex-wrap gap-2">
-                      {project.technologies.map((tech, i) => (
-                        <span
-                          key={i}
-                          className="px-3 py-1 bg-white/5 text-gray-300 rounded-md text-xs font-medium border border-white/10"
-                        >
-                          {tech}
-                        </span>
-                      ))}
+                <SpotlightCard className="bg-neutral-900/80 border border-white/5 rounded-xl overflow-hidden hover:border-cyan-500/30 hover:shadow-[0_0_40px_rgba(34,211,238,0.08)] group flex flex-col h-full transition-all duration-500">
+                  {/* Gradient bar with animated width on hover */}
+                  <div className={`h-1.5 w-full bg-gradient-to-r ${project.gradient} group-hover:h-2 transition-all duration-300`} />
+                  <div className="p-8 flex-1 flex flex-col relative z-10">
+                    <h3 className="text-xl font-bold mb-3 text-white group-hover:text-cyan-400 transition-colors duration-300 flex items-center gap-2">
+                      {project.title}
+                      <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-50 -translate-y-1 group-hover:translate-y-0 transition-all duration-300" />
+                    </h3>
+                    <p className="text-gray-400 mb-6 text-sm leading-relaxed flex-1">{project.description}</p>
+
+                    <div className="mb-6">
+                      <div className="flex flex-wrap gap-2">
+                        {project.technologies.map((tech, i) => (
+                          <span
+                            key={i}
+                            className="px-3 py-1 bg-white/5 text-gray-300 rounded-md text-xs font-medium border border-white/10 hover:border-cyan-500/30 hover:text-cyan-400 transition-all duration-300"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                      <a
+                        href={project.githubUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group/link"
+                      >
+                        <Github size={18} className="group-hover/link:rotate-12 transition-transform" />
+                        <span>Source</span>
+                      </a>
+                      <a
+                        href={project.liveUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm font-bold text-cyan-400 hover:text-cyan-300 transition-all bg-cyan-500/10 px-4 py-2 rounded-full hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                      >
+                        <span>Live Demo</span>
+                        <ExternalLink size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                      </a>
                     </div>
                   </div>
-                  
-                  <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                    <a
-                      href={project.githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-                    >
-                      <Github size={18} />
-                      <span>Source</span>
-                    </a>
-                    <a
-                      href={project.liveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm font-bold text-cyan-400 hover:text-cyan-300 transition-colors bg-cyan-500/10 px-4 py-2 rounded-full hover:bg-cyan-500/20"
-                    >
-                      <span>Live Demo</span>
-                      <ExternalLink size={16} />
-                    </a>
-                  </div>
-                </div>
+                </SpotlightCard>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Contact Section */}
+      {/* ════════════════════════════════════════════
+           CONTACT SECTION
+         ════════════════════════════════════════════ */}
       <section id="contact" className="py-24 px-4 relative">
-        <motion.div 
+        {/* Particle ring behind the contact card */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full border border-cyan-500/10"
+              style={{
+                width: 300 + i * 80,
+                height: 300 + i * 80,
+                animation: `orbit ${20 + i * 5}s linear infinite${i % 2 === 0 ? ' reverse' : ''}`,
+                opacity: 0.15 - i * 0.012,
+              }}
+            >
+              <div className="absolute top-0 left-1/2 w-2 h-2 bg-cyan-400/40 rounded-full -translate-x-1/2" />
+            </div>
+          ))}
+        </div>
+
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto text-center relative z-10 bg-gradient-to-b from-neutral-900 to-black p-12 rounded-3xl border border-white/10 shadow-2xl"
+          className="max-w-4xl mx-auto text-center relative z-10 bg-gradient-to-b from-neutral-900/90 to-black/90 backdrop-blur-xl p-12 rounded-3xl border border-white/10 shadow-2xl"
         >
+          <motion.div
+            initial={{ scale: 0 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/20"
+          >
+            <Mail className="w-8 h-8 text-cyan-400" />
+          </motion.div>
+
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">Let's Build Something Amazing</h2>
           <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
             I'm currently looking for new opportunities. Whether you have a question or just want to say hi, I'll try my best to get back to you!
           </p>
-          
+
           <div className="flex flex-wrap justify-center gap-6">
             <motion.a
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(255,255,255,0.3)' }}
               whileTap={{ scale: 0.95 }}
               href="mailto:thitlin906@gmail.com"
-              className="group flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-bold text-lg shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+              className="group flex items-center gap-3 px-8 py-4 bg-white text-black rounded-full font-bold text-lg shadow-[0_0_20px_rgba(255,255,255,0.2)] relative overflow-hidden"
             >
               <Mail className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              <span>Send Email</span>
+              <span className="relative z-10">Send Email</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 group-hover:opacity-15 transition-opacity duration-300" />
             </motion.a>
             <motion.a
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, borderColor: 'rgba(255,255,255,0.4)' }}
               whileTap={{ scale: 0.95 }}
               href="https://github.com/Lin18210"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 px-8 py-4 border border-white/20 bg-black rounded-full font-bold text-lg text-white hover:bg-white/10"
+              className="group flex items-center gap-3 px-8 py-4 border border-white/20 bg-white/5 backdrop-blur-sm rounded-full font-bold text-lg text-white hover:bg-white/10 transition-all duration-300"
             >
               <Github className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               <span>GitHub</span>
             </motion.a>
             <motion.a
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(59,130,246,0.3)' }}
               whileTap={{ scale: 0.95 }}
               href="https://linkedin.com/in/lin-thit-thwe"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 px-8 py-4 border border-blue-600/30 bg-blue-600/10 rounded-full font-bold text-lg text-blue-400 hover:bg-blue-600/20"
+              className="group flex items-center gap-3 px-8 py-4 border border-blue-600/30 bg-blue-600/10 rounded-full font-bold text-lg text-blue-400 hover:bg-blue-600/20 transition-all duration-300"
             >
               <Linkedin className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               <span>LinkedIn</span>
             </motion.a>
           </div>
-          
+
           <div className="mt-12 pt-8 border-t border-white/5 text-gray-500">
-            <p className="mb-2">📞 +66 95 020 2284</p>
-            <p>📍 Bangkok, Thailand</p>
+            <p className="mb-2 hover:text-gray-300 transition-colors">📞 +66 95 020 2284</p>
+            <p className="hover:text-gray-300 transition-colors">📍 Bangkok, Thailand</p>
           </div>
         </motion.div>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer className="py-8 px-4 border-t border-white/10 text-center text-gray-500 bg-black relative z-10 text-sm">
-        <p className="mb-2">&copy; 2025 Lin Thit Thwe. All rights reserved.</p>
-        <p>Built with React, Tailwind & ❤️</p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+        >
+          <p className="mb-2">&copy; 2025 Lin Thit Thwe. All rights reserved.</p>
+          <p className="flex items-center justify-center gap-1">
+            Built with React, Tailwind & <span className="text-red-500 animate-pulse">❤️</span>
+          </p>
+        </motion.div>
       </footer>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-
     </div>
   );
 }
