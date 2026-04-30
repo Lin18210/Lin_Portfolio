@@ -1048,7 +1048,7 @@ export default function Portfolio() {
         >
           <p className="mb-2">&copy; 2025 Lin Thit Thwe. All rights reserved.</p>
           <p className="flex items-center justify-center gap-1">
-            Built with Love and A Lot of Tea <span className="text-red-500 animate-pulse">❤️</span>
+            <span className="text-red-500 animate-pulse">❤️</span>
           </p>
         </motion.div>
       </footer>
