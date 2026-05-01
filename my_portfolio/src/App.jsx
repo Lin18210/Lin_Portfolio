@@ -531,7 +531,7 @@ export default function Portfolio() {
               className="text-xl font-bold tracking-tighter cursor-pointer group"
             >
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 font-mono-accent text-lg group-hover:from-white group-hover:to-cyan-300 transition-all duration-300">
-                &lt;Welcome&gt;
+                &lt;&gt;
               </span>
             </motion.div>
 
