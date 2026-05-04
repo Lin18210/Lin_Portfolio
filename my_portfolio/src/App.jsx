@@ -992,7 +992,7 @@ export default function Portfolio() {
 
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">Let's Build Something Amazing</h2>
           <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-            I'm currently looking for new opportunities. Whether you have a question or just want to say hi, I'll try my best to get back to you!
+            I'm currently looking for new opportunities. Whether you have questions or just want to say hi, I'll try my best to get back to you!
           </p>
 
           <div className="contact-buttons">
