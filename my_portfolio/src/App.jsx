@@ -1033,7 +1033,7 @@ export default function Portfolio() {
           </div>
 
           <div className="text-gray-500" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <p className="mb-2 hover:text-gray-300 transition-colors">📞 +66 95 020 2284</p>
+            <p className="mb-2 hover:text-gray-300 transition-colors">📞 (+66) 95 020 2284</p>
             <p className="hover:text-gray-300 transition-colors">📍 Bangkok, Thailand</p>
           </div>
         </motion.div>
