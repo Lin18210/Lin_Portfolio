@@ -886,7 +886,7 @@ export default function Portfolio() {
             className="text-center mb-16"
           >
             <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-white mb-4">Featured Work</motion.h2>
-            <motion.p variants={fadeInUp} className="text-gray-400 text-lg">A collection of my recent projects</motion.p>
+            <motion.p variants={fadeInUp} className="text-gray-400 text-lg">A collection of my projects</motion.p>
           </motion.div>
 
           <div className="projects-grid">
