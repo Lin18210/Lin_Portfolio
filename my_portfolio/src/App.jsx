@@ -774,7 +774,7 @@ export default function Portfolio() {
                   </h3>
                   <p className="text-gray-300 leading-relaxed text-lg">
                     From e-commerce platforms to booking systems and real-time chat applications, 
-                    I bring ideas to life with clean code and high attention to detail.
+                    I bring ideas to life with clean code and high attention to details.
                   </p>
                 </TiltCard>
               </motion.div>
