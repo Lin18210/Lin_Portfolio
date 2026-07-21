@@ -349,6 +349,14 @@ export default function Portfolio() {
 
   const projects = [
     {
+      title: "Eldritch Ascent",
+      description: "Eldritch Ascent is a premium web-based, text-driven RPG experience combining the traditional structures of D&D 5e tabletop gaming.",
+      technologies: ["React", "Lucide React", " TailwindCss", "Ai Model Integration"],
+      githubUrl: "https://github.com/Lin18210/InsurTech",
+      liveUrl: "https://deague.vercel.app/",
+      gradient: "from-red-600 to-yellow-600"
+    },
+    {
       title: "InsurTech",
       description: "A Full-Stack responsive insurance quotation web application. Users can get insurance quotes based on their inputs and make payments through Stripe integration.",
       technologies: ["React", "Node.js", "Tailwind", "Stripe"],
